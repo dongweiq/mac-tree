@@ -46,6 +46,7 @@
             background-color: #f8f9fa;
             border-radius: 6px;
             border: 1px solid #e9ecef;
+            line-height: 1.5;
         }
 
         .error {
@@ -55,6 +56,30 @@
             border-radius: 4px;
             background-color: #f8d7da;
             border: 1px solid #f5c6cb;
+        }
+
+        .element-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .element-header {
+            color: #0066cc;
+            font-weight: bold;
+        }
+
+        .element-property {
+            color: #666;
+            margin-left: 4px;
+        }
+
+        .element-value {
+            color: #28a745;
+        }
+
+        .element-status {
+            color: #6c757d;
+            font-style: italic;
         }
     </style>
 </head>
@@ -125,8 +150,50 @@
 
         function formatTree(node, level = 0) {
             const indent = '  '.repeat(level);
-            let result = `${indent}${node.role || 'Unknown'}: ${node.title || 'Untitled'}\n`;
             
+            let result = `${indent}<span class="element-header">${node.role || 'Unknown'}</span>`;
+            if (node.title) {
+                result += `<span class="element-property">标题:</span> <span class="element-value">${node.title}</span>`;
+            }
+            result += '\n';
+            
+            // 添加详细信息区块
+            const details = [];
+            
+            // 添加位置信息（检查有效性）
+            if (node.position && node.position.x >= 0 && node.position.y >= 0) {
+                details.push(`${indent}  <span class="element-property">位置:</span> <span class="element-value">(${Math.round(node.position.x)}, ${Math.round(node.position.y)})</span>`);
+            }
+            
+            // 添加大小信息（检查有效性）
+            if (node.size && node.size.width > 0 && node.size.height > 0) {
+                details.push(`${indent}  <span class="element-property">大小:</span> <span class="element-value">${Math.round(node.size.width)} × ${Math.round(node.size.height)}</span>`);
+            }
+            
+            // 添加值信息
+            if (node.value !== undefined && node.value !== '') {
+                details.push(`${indent}  <span class="element-property">值:</span> <span class="element-value">${node.value}</span>`);
+            }
+            
+            // 添加状态信息
+            const status = [];
+            if (node.enabled !== undefined) {
+                status.push(`启用: ${node.enabled ? '是' : '否'}`);
+            }
+            if (node.focused !== undefined) {
+                status.push(`聚焦: ${node.focused ? '是' : '否'}`);
+            }
+            
+            if (status.length > 0) {
+                details.push(`${indent}  <span class="element-status">[${status.join(' | ')}]</span>`);
+            }
+            
+            // 如果有详细信息，添加到结果中
+            if (details.length > 0) {
+                result += details.join('\n') + '\n';
+            }
+            
+            // 处理子元素
             if (node.children && node.children.length > 0) {
                 for (const child of node.children) {
                     result += formatTree(child, level + 1);

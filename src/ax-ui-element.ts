@@ -29,7 +29,12 @@ class AXUIElement {
     const attributes = accessibility.getElementAttributes(element);
     const result: any = {
       role: attributes.role || 'Unknown',
-      title: attributes.title || 'Untitled',
+      title: attributes.title || '',
+      value: attributes.value,
+      position: attributes.position,
+      size: attributes.size,
+      enabled: attributes.enabled,
+      focused: attributes.focused,
       children: []
     };
 
