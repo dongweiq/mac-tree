@@ -31,6 +31,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            margin-right: 10px;
         }
 
         button:hover {
@@ -61,13 +62,56 @@
     <div id="container">
         <h1>macOS UI Element Tree Viewer</h1>
         <div id="controls">
-            <button onclick="refreshTree()">刷新 UI 树</button>
+            <select id="window-select"></select>
+            <button onclick="analyzeSelectedWindow()">分析选中窗口</button>
+            <button onclick="refreshTree()">刷新 UI 树（全局）</button>
         </div>
         <div id="tree"></div>
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
+        let windowList = [];
+        let selectedPid = null;
+
+        async function loadWindowList() {
+            console.log('开始加载窗口列表...');
+            windowList = await ipcRenderer.invoke('get-window-list');
+            console.log('获取到的窗口列表:', windowList);
+            const select = document.getElementById('window-select');
+            select.innerHTML = '';
+            windowList.forEach(win => {
+                console.log('处理窗口:', win);
+                const option = document.createElement('option');
+                option.value = win.pid;
+                option.text = `[${win.appName}] ${win.title}`;
+                select.appendChild(option);
+            });
+            if (windowList.length > 0) {
+                selectedPid = windowList[0].pid;
+                console.log('选中第一个窗口，PID:', selectedPid);
+            } else {
+                console.log('警告：没有找到任何窗口');
+            }
+        }
+
+        document.getElementById('window-select').addEventListener('change', (e) => {
+            selectedPid = Number(e.target.value);
+        });
+
+        async function analyzeSelectedWindow() {
+            const treeElement = document.getElementById('tree');
+            if (!selectedPid) {
+                treeElement.innerHTML = '<div class="error">请选择窗口</div>';
+                return;
+            }
+            try {
+                const tree = await ipcRenderer.invoke('get-window-tree', selectedPid);
+                treeElement.innerHTML = formatTree(tree);
+            } catch (error) {
+                treeElement.innerHTML = `<div class="error">${error.message}</div>`;
+            }
+        }
 
         async function refreshTree() {
             const treeElement = document.getElementById('tree');
@@ -93,8 +137,8 @@
         }
 
         // 初始加载
-        refreshTree();
-
+        loadWindowList();
+        
         ipcRenderer.on('main-log', (event, { type, args }) => {
             if (type === 'log') {
                 console.log('[主进程]', ...args);

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import { execSync } from 'child_process';
 
 let accessibility: any;
 
@@ -48,6 +49,57 @@ class AXUIElement {
     } catch (error) {
       return null;
     }
+  }
+
+  // 获取所有可见窗口列表（pid, app名, 窗口标题）
+  static getWindowList() {
+    console.log('[getWindowList] 开始获取窗口列表...');
+    const script = `
+      set output to "["
+      tell application "System Events"
+        set appList to (every process whose background only is false)
+        repeat with proc in appList
+          set appName to name of proc
+          set pid to unix id of proc
+          try
+            repeat with w in windows of proc
+              set winTitle to name of w
+              if winTitle is not "" then
+                if output is not "[" then
+                  set output to output & ","
+                end if
+                set output to output & "{\\"pid\\":" & pid & ",\\"appName\\":\\"" & appName & "\\",\\"title\\":\\"" & winTitle & "\\"}"
+              end if
+            end repeat
+          end try
+        end repeat
+      end tell
+      set output to output & "]"
+      return output
+    `;
+    
+    try {
+      const result = execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`).toString();
+      console.log('[getWindowList] AppleScript 执行结果:', result);
+      
+      try {
+        const windows = JSON.parse(result);
+        console.log('[getWindowList] 解析成功，窗口列表:', windows);
+        return windows;
+      } catch (parseError) {
+        console.error('[getWindowList] JSON 解析失败:', parseError);
+        console.log('[getWindowList] 原始结果:', result);
+        return [];
+      }
+    } catch (error) {
+      console.error('[getWindowList] 执行 AppleScript 出错:', error);
+      throw error;
+    }
+  }
+
+  // 通过 pid 获取应用的主窗口 AXUIElement
+  static getAppMainWindowElement(pid: number) {
+    return accessibility.getAppMainWindowElement(pid);
   }
 }
 

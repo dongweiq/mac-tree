@@ -82,6 +82,29 @@ ipcMain.handle('get-ui-element-tree', async () => {
   return AXUIElement.getElementTree(systemWide);
 });
 
+// 获取所有窗口列表
+ipcMain.handle('get-window-list', async () => {
+  console.log('[主进程] 收到获取窗口列表请求');
+  sendLogToRenderer('log', '[主进程] 开始获取窗口列表');
+  try {
+    const AXUIElement = require('./ax-ui-element');
+    const windows = AXUIElement.getWindowList();
+    sendLogToRenderer('log', '[主进程] 成功获取窗口列表', JSON.stringify(windows));
+    return windows;
+  } catch (error: any) {
+    console.error('[主进程] 获取窗口列表失败:', error);
+    sendLogToRenderer('error', '[主进程] 获取窗口列表失败:', error.toString());
+    throw error;
+  }
+});
+
+// 获取指定窗口的树结构
+ipcMain.handle('get-window-tree', async (event, pid: number) => {
+  const AXUIElement = require('./ax-ui-element');
+  const winElement = AXUIElement.getAppMainWindowElement(pid);
+  return AXUIElement.getElementTree(winElement);
+});
+
 function sendLogToRenderer(type: 'log' | 'error', ...args: any[]) {
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('main-log', { type, args: args.map(String) });
